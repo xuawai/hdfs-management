@@ -2,6 +2,7 @@
 var path = require('path')
 
 module.exports = {
+    url: 'http://hadoop-master:14000',
     build: {
         env: require('./prod.env'),
         index: path.resolve(__dirname, '../dist/index.html'),
@@ -30,6 +31,7 @@ module.exports = {
         proxyTable: {
             '/api':{
                 target:'http://jsonplaceholder.typicode.com',
+                // target:'http://hadoop-master:14000',
                 changeOrigin:true,
                 pathRewrite:{
                     '/api':''

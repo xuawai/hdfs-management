@@ -3,59 +3,135 @@
         <div class="crumbs">
             <el-breadcrumb separator="/">
                 <el-breadcrumb-item><i class="el-icon-date"></i> 表单</el-breadcrumb-item>
-                <el-breadcrumb-item>图片上传</el-breadcrumb-item>
+                <el-breadcrumb-item>文件上传</el-breadcrumb-item>
             </el-breadcrumb>
         </div>
         <div class="content-title">支持拖拽</div>
-        <div class="plugins-tips">
-            Element UI自带上传组件。
-            访问地址：<a href="http://element.eleme.io/#/zh-CN/component/upload" target="_blank">Element UI Upload</a>
-        </div>
+ 
+        
+        <el-dialog
+          title="文件内容"
+          :visible.sync="dialogVisible"
+          width="30%"
+          :before-close="handleClose">
+          <el-input type="textarea" autosize v-model="fileContent" :disabled="true"></el-input>
+          <span slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="dialogVisible = false">确 定</el-button>
+          </span>
+        </el-dialog>
+
         <el-upload
-            class="upload-demo"
-            drag
-            action="/api/posts/"
-            multiple>
-            <i class="el-icon-upload"></i>
-            <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-            <div class="el-upload__tip" slot="tip">只能上传jpg/png文件，且不超过500kb</div>
+          class="upload-demo"
+          action=""
+          :on-change="handleChange"
+          :on-preview="handlePreview"
+          :on-remove="handleRemove"
+          :on-success="handleSuccess"
+          :file-list="fileList"
+          :auto-upload="false">
+          <i class="el-icon-upload"></i>
+          <div class="el-upload__text">将文件拖到此处，或<em>点击选中</em></div>
+          <div class="el-upload__tip" slot="tip"></div>
         </el-upload>
-        <div class="content-title">支持裁剪</div>
-        <div class="plugins-tips">
-            Vue-Core-Image-Upload：一款轻量级的vue上传插件，支持裁剪。
-            访问地址：<a href="https://github.com/Vanthink-UED/vue-core-image-upload" target="_blank">Vue-Core-Image-Upload</a>
-        </div>
-        <img class="pre-img" :src="src" alt="">
-        <vue-core-image-upload :class="['pure-button','pure-button-primary','js-btn-crop']"
-                               :crop="true"
-                               text="上传图片"
-                               url="/api/posts/"
-                               extensions="png,gif,jpeg,jpg"
-                               @:imageuploaded="imageuploaded"
-                               @:errorhandle="handleError"></vue-core-image-upload>
+
+        <!-- <el-button type="primary" class="handle-del mr10" @click="createFile">新建文件</el-button> -->
+        <el-button type="primary" class="handle-del mr10" @click="writeFile">上传文件</el-button>
+        <el-button type="primary" class="handle-del mr10" @click="readFile">读取文件</el-button>
+
     </div>
 </template>
 
 <script>
-    import VueCoreImageUpload  from 'vue-core-image-upload';
+    import server from '../../../config/index';
     export default {
         data: function(){
             return {
-                src: './static/img/img.jpg',
-                fileList: []
+                file : {},
+                dialogVisible: false,
+                fileContent: ''
             }
         },
         components: {
-                VueCoreImageUpload
+            
         },
         methods:{
-            imageuploaded(res) {
-                console.log(res)
+            submitUpload() {
+                   this.$refs.upload.submit();
+                 },
+            handleChange(file, fileList){
+                console.log("handleProgress");
+                this.file = file;
+                // this.$message.info('文件'+file.name+'已选中！');
             },
-            handleError(){
-                this.$notify.error({
-                    title: '上传失败',
-                    message: '图片上传接口上传失败，可更改为自己的服务器接口'
+             handleRemove(file, fileList) {
+                console.log("handleRemove");
+               console.log(file, fileList);
+             },
+             handlePreview(file) {
+                console.log("handlePreview");
+               console.log(file);
+             },
+             handleSuccess(file){
+                this.$message.info('文件'+file.name+'已选中！');
+             },
+            createFile(){
+
+                 if(typeof(this.file.name) == 'undefined'){
+                    this.$message.error('未选择文件！');
+                    return;
+                 }
+                    
+
+                 this.$http.put(server.url + '/webhdfs/v1/' + this.file.name + '?op=CREATE&user.name=root', "", 
+                    {headers: {'content-type':'application/octet-stream'}}).then(response => {
+
+                   console.log(this.file.name + " is created success");
+                    console.log(response);
+                   }, response => {
+                     
+                     console.log("error");
+                     console.log(response);
+                });
+            },
+            writeFile(){
+
+                 if(typeof(this.file.name) == 'undefined'){
+                    this.$message.error('未选择文件！');
+                    return;
+                 }
+
+                 this.$http.put(server.url + '/webhdfs/v1/' + this.file.name + '?op=CREATE&user.name=root', this.file.raw, 
+                    {headers: {'content-type':'application/octet-stream'}}).then(response => {
+
+                   console.log(this.file.name + " is written success");
+                   console.log(response);
+                   this.$message.info('文件'+ this.file.name +'上传成功！');
+                   }, response => {
+                     
+                     console.log("error");
+                     console.log(response);
+                });
+            },
+            readFile(){
+
+                if(typeof(this.file.name) == 'undefined'){
+                    this.$message.error('未上传文件！');
+                    return;
+                 }
+
+                 this.$http.get(server.url + '/webhdfs/v1/' + this.file.name + '?op=OPEN&user.name=root').then(response => {
+
+                   console.log(this.file.name + " is read success");
+                   this.fileContent = response.bodyText;
+
+                   this.dialogVisible = true;
+
+
+                   console.log(response);
+                   }, response => {
+                     
+                     console.log("error");
+                     console.log(response);
                 });
             }
         }
